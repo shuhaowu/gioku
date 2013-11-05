@@ -1,0 +1,40 @@
+#!/bin/bash
+
+if [ $GL_REPO = "gitolite-admin" ]; then
+  echo "Pushing gitolite-admin. Skipping deployment..."
+else
+  unset GIT_DIR
+  GIT_WORK_TREE=/home/git/www/$GL_REPO
+  # setup the repo..
+  if [ ! -f /home/git/nginxconfs/$GL_REPO.conf ]; then
+    echo "First push detected: setting up..."
+    DOMAIN=$(cat /home/git/gioku/DOMAIN)
+    cat >/home/git/nginxconfs/$GL_REPO.conf <<EOF
+server {
+  listen 80;
+  server_name $GL_REPO.$DOMAIN;
+
+  root /home/git/www/$GL_REPO;
+  index index.html;
+
+  error_page 404 /404.html;
+  error_page 403 /403.html;
+  location /.git {
+    deny all;
+  }
+}
+EOF
+
+    git clone -q /home/git/repositories/$GL_REPO.git $GIT_WORK_TREE
+    chmod a+rx $GIT_WORK_TREE
+    sudo /etc/init.d/nginx reload | grep "silence!!"
+  fi
+
+  echo "Pushing changes to production..."
+  cd $GIT_WORK_TREE
+  git fetch -q --all
+  git reset -q --hard origin/master
+  find $GIT_WORK_TREE -type d -exec chmod 755 {} \;  
+  find $GIT_WORK_TREE -type f -exec chmod 644 {} \;  
+  echo "Pushed $(git rev-parse HEAD) to production!"
+fi
