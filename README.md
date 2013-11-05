@@ -84,6 +84,8 @@ do so by specifying a file called CNAME with one line. Just like Github pages.
     $ git commit
     $ git push origin master
 
+Go to your DNS provider and point mrrowl.io to the server.
+
 Now you can go to http://mrrowl.io and get the same as if you were coming from mrrowl.github.io.
 
 Some more logistics
@@ -94,5 +96,5 @@ In your repositories:
  - index.html is mapped as the index.
  - /404.html will be displayed in event of 404.
  - /403.html for 403.
- - /CNAME
+ - /CNAME is a file with one line that specifies a custom domain for that repo
 
