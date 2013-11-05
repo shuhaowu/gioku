@@ -43,6 +43,44 @@ You can use [gitolite-admin](http://gitolite.com/gitolite/admin.html) to
 manage websites. Create a new gitolite repository and that will become a 
 website accessible under reponame.yourdomain.com
 
+For example, you can add a site called "mrrowl" with the following appended to 
+gitolite.conf:
+
+    repo mrrowl 
+      RW+ = @all
+
+Commit that and push the gitolite admin repo (again, see gitolite's docs for more 
+details).
+
+Now clone the mrrowl repository
+
+    $ git clone git@yourdomain.com:mrrowl.git
+
+Make some changes
+
+    $ cd mrrowl
+    $ echo "<h1>It's a mrrowl!</h1>" > index.html
+
+Commit and push:
+    
+    $ git add .
+    $ git commit
+    $ git push
+    Counting objects: 5, done.
+    Writing objects: 100% (3/3), 252 bytes, done.
+    Total 3 (delta 0), reused 0 (delta 0)
+    remote: Pushing changes to production...
+    remote: Pushed 81465048f05aa87666521ea82cfa18a1be0d8e4e to production!
+    To git@yourdomain:mrrowl.git
+       6b74cc3..8146504  master -> master
+
+Now browse to http://mrrowl.yourdomain.com to see your new site!
+
+Some more logistics
+-------------------
+
+In your repositories:
+
  - index.html is mapped as the index.
  - /404.html will be displayed in event of 404.
  - /403.html for 403.
