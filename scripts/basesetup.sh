@@ -23,8 +23,8 @@ sudo /etc/init.d/nginx start
 sudo adduser --disabled-password -gecos "" git
 sudo -u git git clone https://github.com/sitaramc/gitolite.git /home/git/gitolite
 cd /home/git/gitolite
-git checkout $LATEST_GITOLITE_VERSION
+sudo su git -c "git checkout $LATEST_GITOLITE_VERSION"
 sudo -u git mkdir /home/git/bin
-echo "export PATH=\$PATH:/home/git/bin" >> /home/git/.bashrc
+sudo su git -c "echo "export PATH=\$PATH:/home/git/bin" >> /home/git/.bashrc"
 sudo su git -c "/home/git/gitolite/install -ln"
 
