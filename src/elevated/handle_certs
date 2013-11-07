@@ -1,0 +1,38 @@
+#!/bin/bash
+
+GL_REPO=$1
+
+if [[ "$GL_REPO" == *..* ]]; then
+  echo "Security error! GL_REPO must not contain .."
+  exit 1
+fi
+
+readonly NGINX_CONFS_DIR=/home/git/nginxconfs
+readonly WWW_DIR=/home/git/www/$GL_REPO
+
+if [[ -d $WWW_DIR/_certs && -f $WWW_DIR/_certs/cert.pem && -f $WWW_DIR/_certs/cert.key ]]; then
+  if [ -f $NGINX_CONFS_DIR/certs/$GL_REPO/cert.pem ]; then
+    OLD_PEM_HASH=$(md5sum $NGINX_CONFS_DIR/certs/$GL_REPO/cert.pem | cut -d ' ' -f 1)
+  else
+    OLD_PEM_HASH=""
+  fi
+
+  NEW_PEM_HASH=$(md5sum $WWW_DIR/_certs/cert.pem | cut -d ' ' -f 1)
+
+  if [ "$OLD_PEM_HASH" != "$NEW_PEM_HASH" ]; then
+    echo "[gioku log]: Handling certificate updates..."
+    mkdir -p $NGINX_CONFS_DIR/certs/$GL_REPO
+    cp $WWW_DIR/_certs/cert.pem $NGINX_CONFS_DIR/certs/$GL_REPO
+    cp $WWW_DIR/_certs/cert.key $NGINX_CONFS_DIR/certs/$GL_REPO
+    chmod 600 $NGINX_CONFS_DIR/certs/$GL_REPO
+    chown root:root -R $NGINX_CONFS_DIR/certs/$GL_REPO
+  fi
+else
+  if [ -d $NGINX_CONFS_DIR/certs/$GL_REPO ]; then
+    echo "[gioku log]: Certificate removed..."
+    rm -rf $NGINX_CONFS_DIR/certs/$GL_REPO
+  fi
+fi
+
+rm -rf $WWW_DIR/_certs
+

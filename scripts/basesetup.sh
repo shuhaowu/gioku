@@ -13,6 +13,7 @@ if ! grep -q gioku-nginx-reload "/etc/sudoers"; then
 touch /etc/sudoers.tmp
   cp /etc/sudoers /tmp/sudoers.new
   echo "%git ALL=(ALL)NOPASSWD:/etc/init.d/nginx reload # gioku-nginx-reload" >> /tmp/sudoers.new
+  echo "%git ALL=(ALL)NOPASSWD:/home/git/gioku/elevated/handle_certs # gioku-handle-certs" >> /tmp/sudoers.new
   EDITOR="cp /tmp/sudoers.new" visudo
   rm /tmp/sudoers.new
 fi
