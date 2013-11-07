@@ -14,7 +14,7 @@ fi
 sudo su git -c "/home/git/bin/gitolite setup -pk $keypath"
 
 bash $SCRIPT_DIR/update-prod.sh
-sudo su git -c "mkdir -p/home/git/nginxconfs/certs; chmod 700 /home/git/nginxconfs"
+sudo su git -c "mkdir -p /home/git/nginxconfs/certs; chmod 700 /home/git/nginxconfs"
 sudo su git -c "mkdir /home/git/www; chmod 755 /home/git/www"
 sudo sh -c "echo 'include /home/git/nginxconfs/*.conf;' > /etc/nginx/conf.d/gioku.conf"
 
