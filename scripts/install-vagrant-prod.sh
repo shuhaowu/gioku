@@ -8,5 +8,5 @@ sudo apt-get install -y git
 git clone https://github.com/shuhaowu/gioku.git
 sudo chown vagrant:vagrant gioku
 
-echo "Now run sudo gioku/scripts/install-prod.sh to install gioku in this box to test."
+echo "Now run \`sudo gioku/scripts/install-prod.sh\` to install gioku in this box to test."
 touch /home/vagrant/installed

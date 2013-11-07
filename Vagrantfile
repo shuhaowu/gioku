@@ -15,7 +15,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   end
 
   config.vm.define "prod" do |prod|
-    prod.vm.synced_folder ".", "/vagrant", disabled: true
     prod.vm.provision :shell, :path => "scripts/install-vagrant-prod.sh"
     prod.vm.network :private_network, ip: "192.168.33.178"
   end
