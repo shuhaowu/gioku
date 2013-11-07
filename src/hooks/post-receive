@@ -1,13 +1,26 @@
 #!/bin/bash
 
-update_nginx() {
-  echo "Configuration changes detected. Updating..."
+log() {
+  echo "[gioku log]: $@"
+}
 
-  if [ -f $GIT_WORK_TREE/CNAME ]; then
-    CNAME=$(cat $GIT_WORK_TREE/CNAME)
+err() {
+  echo "[gioku error]: $@" >&2
+}
+
+readonly DOMAIN=$(cat /home/git/gioku/DOMAIN)
+readonly NGINX_CONFS_DIR="/home/git/nginxconfs"
+readonly WWW_BASE_DIR="/home/git/www"
+readonly REPOSITORIES_DIR="/home/git/repositories"
+
+update_nginx() {
+  log "Configuration changes detected. Updating environment..."
+
+  if [ -f $WWW_DIR/CNAME ]; then
+    CNAME=$(cat $WWW_DIR/CNAME)
   fi
 
-  cat >/home/git/nginxconfs/$GL_REPO.conf <<EOF
+  cat >$NGINX_CONFS_DIR/$GL_REPO.conf <<EOF
 # DO NOT MODIFY THIS FILE
 server {
   listen 80;
@@ -24,45 +37,57 @@ server {
   location /CNAME {
     deny all;
   }
+  location /certs {
+    deny all;
+  }
 }
 EOF
   sudo /etc/init.d/nginx reload | grep "silence!!"
 }
 
-if [ $GL_REPO = "gitolite-admin" ]; then
-  echo "Pushing gitolite-admin. Skipping deployment..."
-else
-  unset GIT_DIR
-  GIT_WORK_TREE=/home/git/www/$GL_REPO
-  DOMAIN=$(cat /home/git/gioku/DOMAIN)
-  # setup the repo..
-  if [ ! -f /home/git/nginxconfs/$GL_REPO.conf ]; then
-    echo "First push detected: setting up..."
-    git clone -q /home/git/repositories/$GL_REPO.git $GIT_WORK_TREE
-    chmod a+rx $GIT_WORK_TREE
+first_push_setup() {
+  log "First push detected. Setting up production environment..."
+  git clone -q $REPOSITORIES_DIR/$GL_REPO.git $WWW_DIR
+  chmod a+rx $WWW_DIR
 
-    update_nginx
-  fi
+  update_nginx
+}
 
-  echo "Pushing changes to production..."
-  cd $GIT_WORK_TREE
-  git fetch -q --all
-  git reset -q --hard origin/master
-  find $GIT_WORK_TREE -type d -exec chmod 755 {} \;
-  find $GIT_WORK_TREE -type f -exec chmod 644 {} \;
-
-   if [ -f $GIT_WORK_TREE/CNAME ]; then
-    CNAME=$(cat $GIT_WORK_TREE/CNAME)
-    if ! grep -q " $CNAME[ ;]" /home/git/nginxconfs/$GL_REPO.conf; then
-      echo "Need new CNAME $CNAME"
+update_cname_if_required() {
+  if [ -f $WWW_DIR/CNAME ]; then
+    CNAME=$(cat $WWW_DIR/CNAME)
+    if ! grep -q " $CNAME[ ;]" $NGINX_CONFS_DIR/$GL_REPO.conf; then
+      log "Adding CNAME $CNAME"
       update_nginx
     fi
   else
-    if ! grep -wq "$GL_REPO.$DOMAIN ;" /home/git/nginxconfs/$GL_REPO.conf; then
-      echo "Need remove CNAME"
+    if ! grep -wq "$GL_REPO.$DOMAIN ;" $NGINX_CONFS_DIR/$GL_REPO.conf; then
+      log "Removing CNAME"
       update_nginx
     fi
   fi
 
-  echo "Pushed $(git rev-parse HEAD) to production!"
+}
+
+if [ $GL_REPO = "gitolite-admin" ]; then
+  log "Pushing gitolite-admin. Skipping deployment..."
+else
+  unset GIT_DIR
+  GIT_WORK_TREE=$WWW_BASE_DIR/$GL_REPO
+  readonly WWW_DIR=$GIT_WORK_TREE
+  # setup the repo..
+  if [ ! -f $NGINX_CONFS_DIR/$GL_REPO.conf ]; then
+    first_push_setup
+  fi
+
+  log "Pushing changes to production"
+  cd $WWW_DIR
+  git fetch -q --all
+  git reset -q --hard origin/master
+  find $WWW_DIR -type d -exec chmod 755 {} \;
+  find $WWW_DIR -type f -exec chmod 644 {} \;
+
+  update_cname_if_required
+
+  log "Pushed $(git rev-parse HEAD) to production!"
 fi
