@@ -30,9 +30,14 @@ if [[ -d $WWW_DIR/_certs && -f $WWW_DIR/_certs/cert.pem && -f $WWW_DIR/_certs/ce
 else
   if [ -d $NGINX_CONFS_DIR/certs/$GL_REPO ]; then
     echo "[gioku log]: Certificate removed..."
+    rm -rf $WWW_DIR/_certs
     rm -rf $NGINX_CONFS_DIR/certs/$GL_REPO
   fi
 fi
 
-rm -rf $WWW_DIR/_certs
+# We want to leave the _certs directory attach as that signals to the 
+# post-receive that there are certificates as post-receive cannot see into
+# nginxconfs/certs
+rm -f $WWW_DIR/_certs/cert.pem
+rm -f $WWW_DIR/_certs/cert.key
 

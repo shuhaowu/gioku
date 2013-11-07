@@ -14,19 +14,60 @@ readonly WWW_BASE_DIR="/home/git/www"
 readonly REPOSITORIES_DIR="/home/git/repositories"
 
 update_nginx() {
-  log "Configuration changes detected. Updating environment..."
+  log "Updating environment."
 
   if [ -f $WWW_DIR/CNAME ]; then
     CNAME=$(cat $WWW_DIR/CNAME)
   fi
 
-  cat >$NGINX_CONFS_DIR/$GL_REPO.conf <<EOF
+  if [ -d $WWW_DIR/_certs ]; then
+    cat >$NGINX_CONFS_DIR/$GL_REPO.conf <<EOF
 # DO NOT MODIFY THIS FILE
 server {
   listen 80;
-  server_name $GL_REPO.$DOMAIN $CNAME;
+  server_name $CNAME;
+  # 301. Because you don't wanna migrate back to no certs.
+  return 301 https://$CNAME\$request_uri;
+}
 
-  root $GIT_WORK_TREE;
+server {
+  listen 443 ssl;
+  server_name $CNAME;
+
+  ssl on;
+  ssl_certificate $NGINX_CONFS_DIR/certs/$GL_REPO/cert.pem;
+  ssl_certificate_key $NGINX_CONFS_DIR/certs/$GL_REPO/cert.key;
+
+  # Secure default
+  ssl_prefer_server_ciphers on;
+  ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+  # forward secrecy
+  ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-RC4-SHA:ECDHE-RSA-AES128-SHA:AES128-GCM-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH:!CAMELLIA:!PSK:!SRP;
+  ssl_session_cache    shared:SSL:10m;
+  ssl_session_timeout  10m;
+  add_header Strict-Transport-Security max-age=31536000;
+
+  root $WWW_DIR;
+  index index.html;
+
+  error_page 404 /404.html;
+  error_page 403 /403.html;
+  location /.git {
+    deny all;
+  }
+  location /CNAME {
+    deny all;
+  }
+  location /certs {
+    deny all;
+  }
+}
+
+server {
+  listen 80;
+  server_name $GL_REPO.$DOMAIN;
+
+  root $WWW_DIR;
   index index.html;
 
   error_page 404 /404.html;
@@ -42,6 +83,31 @@ server {
   }
 }
 EOF
+
+  else
+    cat >$NGINX_CONFS_DIR/$GL_REPO.conf <<EOF
+# DO NOT MODIFY THIS FILE
+server {
+  listen 80;
+  server_name $GL_REPO.$DOMAIN $CNAME;
+
+  root $WWW_DIR;
+  index index.html;
+
+  error_page 404 /404.html;
+  error_page 403 /403.html;
+  location /.git {
+    deny all;
+  }
+  location /CNAME {
+    deny all;
+  }
+  location /certs {
+    deny all;
+  }
+}
+EOF
+  fi
   sudo /etc/init.d/nginx reload | grep "silence!!"
 }
 
@@ -49,23 +115,6 @@ first_push_setup() {
   log "First push detected. Setting up production environment..."
   git clone -q $REPOSITORIES_DIR/$GL_REPO.git $WWW_DIR
   chmod a+rx $WWW_DIR
-
-  update_nginx
-}
-
-update_cname_if_required() {
-  if [ -f $WWW_DIR/CNAME ]; then
-    CNAME=$(cat $WWW_DIR/CNAME)
-    if ! grep -q " $CNAME[ ;]" $NGINX_CONFS_DIR/$GL_REPO.conf; then
-      log "Adding CNAME $CNAME"
-      update_nginx
-    fi
-  else
-    if ! grep -wq "$GL_REPO.$DOMAIN ;" $NGINX_CONFS_DIR/$GL_REPO.conf; then
-      log "Removing CNAME"
-      update_nginx
-    fi
-  fi
 }
 
 if [ $GL_REPO = "gitolite-admin" ]; then
@@ -83,11 +132,12 @@ else
   cd $WWW_DIR
   git fetch -q --all
   git reset -q --hard origin/master
+  git clean -fd
   find $WWW_DIR -type d -exec chmod 755 {} \;
   find $WWW_DIR -type f -exec chmod 644 {} \;
 
   sudo /home/git/gioku/elevated/handle_certs $GL_REPO
-  update_cname_if_required
+  update_nginx
 
   log "Pushed $(git rev-parse HEAD) to production!"
 fi
