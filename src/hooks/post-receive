@@ -58,7 +58,7 @@ server {
   location /CNAME {
     deny all;
   }
-  location /certs {
+  location /_certs {
     deny all;
   }
 }
@@ -78,7 +78,7 @@ server {
   location /CNAME {
     deny all;
   }
-  location /certs {
+  location /_certs {
     deny all;
   }
 }
@@ -102,7 +102,7 @@ server {
   location /CNAME {
     deny all;
   }
-  location /certs {
+  location /_certs {
     deny all;
   }
 }
